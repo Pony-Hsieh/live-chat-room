@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>websocket test</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"
+      integrity="sha512-39BSQXI5q1XlvVhLfFRidKG8KM6Tr6VS/XSnNo6N/A0ZXexHCeoUI/s+ulujQy3UREjoLNrMnFat8VI0mMugWA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
+
+  <body>
+    <h1>websocket test</h1>
+    <p>
+      使用技術：
+      <br />
+      前端： vue
+      <br />
+      後端： node
+      <br />
+      前後端通訊協定：websocket
+    </p>
+
+    <div id="app">
+      <section>
+        <!-- 姓名 -->
+        <label for="inputUserName">
+          名字
+          <input
+            id="inputUserName"
+            :value="inputUserName"
+            @input="event =>
+          checkInput('inputUserName', event)"
+          />
+        </label>
+        <br />
+        <!-- 輸入框 -->
+        <label for="inputContent">
+          輸入聊天內容：
+          <input
+            id="inputContent"
+            :value="inputContent"
+            @input="event => checkInput('inputContent', event)"
+          />
+        </label>
+        <button id="btnSendContent" type="button" @click="sendChatContent">
+          送出
+        </button>
+      </section>
+      <!-- 展示輸入內容 -->
+      <p
+        v-for="content in allContent"
+        v-if="allContent.lenth !== 0"
+        style="max-width: 100%; word-break: break-all"
+      >
+        名字：{{ content.name }}
+        <br />
+        內容：{{ content.content }}
+        <br />
+        發布時間：{{ convertTime(content.time) }}
+      </p>
+    </div>
+
+    <script>
+      /* websocket 初始化 */
+      // 建立 WebSocket (本例 server 端於 localhost 運行)
+      const PORT = 3000;
+      const url = `ws://localhost:${PORT}`;
+      const ws = new WebSocket(url);
+
+      const { ref, reactive } = Vue;
+
+      const app = Vue.createApp({
+        setup() {
+          // 監聽 連線開啟時...
+          ws.onopen = () => {
+            console.log("open connection");
+          };
+          // 監聽 連線關閉時...
+          ws.onclose = () => {
+            console.log("close connection");
+          };
+          // 監聽 收到消息時...
+          ws.onmessage = (event) => {
+            allContent.unshift(JSON.parse(event.data));
+          };
+          // 監聽 錯誤時...
+          ws.onerror = (event) => {
+            console.log(event);
+          };
+
+          const inputUserName = ref("匿名");
+          const inputContent = ref("Hello, world!");
+          const allContent = reactive([]);
+
+          function checkInput(field, e) {
+            switch (field) {
+              case "inputUserName":
+                inputUserName.value = event.target.value;
+                break;
+              case "inputContent":
+                inputContent.value = event.target.value;
+                break;
+            }
+          }
+
+          function sendChatContent(e) {
+            if (inputContent.value === "") {
+              alert("請輸入內容再送出");
+              return;
+            }
+            if (inputUserName.value === "") {
+              inputUserName.value = "匿名";
+            }
+            const msg = {
+              name: inputUserName.value,
+              content: inputContent.value,
+              time: Date.now(),
+            };
+            ws.send(JSON.stringify(msg));
+            inputContent.value = "";
+          }
+
+          function convertTime(timestamp) {
+            function padStartWithZero(num, digit = 2) {
+              return num.toString().padStart(digit, "0");
+            }
+
+            const time = new Date(timestamp);
+            const res = `${time.getFullYear()}-${padStartWithZero(
+              time.getMonth() + 1
+            )}-${padStartWithZero(time.getDate())} ${padStartWithZero(
+              time.getHours()
+            )}:${padStartWithZero(time.getMinutes())}:${padStartWithZero(
+              time.getSeconds()
+            )}'${padStartWithZero(time.getMilliseconds(), 3)}`;
+            console.log();
+            return res;
+          }
+
+          return {
+            checkInput,
+            sendChatContent,
+            convertTime,
+            inputUserName,
+            inputContent,
+            allContent,
+          };
+        },
+      });
+
+      app.mount("#app");
+    </script>
+  </body>
+</html>
